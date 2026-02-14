@@ -178,7 +178,7 @@ echo ""
 wait_for_user "Press Enter to continue..."
 
 step "Creating blocker trigger for Risk Manager..."
-cat > $VAULT/agent/inbox/risk/2026-02-14T14-30-blocker-api.md << 'EOF'
+cat > $VAULT/agent/inbox/risk/2026-02-14T14-30-blocker-auth.md << 'EOF'
 ---
 from: user
 date: 2026-02-14T14:30:00Z
@@ -187,11 +187,15 @@ priority: high
 
 **Blocker identified:**
 
-The team reports that the shipping carrier API (ShipFast) has poor documentation. Integration is taking 2x longer than estimated. Originally: 3 days. Now: likely 6 days.
+Joao (Backend Lead) reports that the user authentication implementation is more complex than estimated. JWT token management, session handling, and role-based access control (supplier vs shipper) is taking 2x longer than estimated.
+
+Originally: 2 days (per scope.md)
+Now: likely 4 days
 
 **Impact:**
-- Timeline: Pushes milestone "API integration complete" from 2026-02-21 to 2026-02-24
-- Dependencies: Delays testing phase start
+- Timeline: Pushes Week 2 milestone "User sign-up/login working" by 2 days
+- Dependencies: Blocks all user-specific features (posting shipments/trips)
+- Critical path: Authentication is a prerequisite for everything else
 
 **Request:**
 Assess this as a risk and recommend mitigation.
@@ -214,7 +218,7 @@ check_file_exists "$VAULT/context/blockers.md"
 success "Risk Manager updated risk register and blockers"
 
 step "Checking if Risk archived the trigger..."
-if [ -f "$VAULT/agent/inbox/risk/2026-02-14T14-30-blocker-api.md" ]; then
+if [ -f "$VAULT/agent/inbox/risk/2026-02-14T14-30-blocker-auth.md" ]; then
     error_exit "Trigger file not archived (still in inbox)"
 fi
 success "Trigger file was processed and archived"

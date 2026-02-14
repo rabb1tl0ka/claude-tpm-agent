@@ -117,13 +117,13 @@ cat vaults/peaklogistics/agent/memory/delivery.md
 ## Act 2: Normal Operations - Role Coordination (5-7 min)
 
 ### Context for Audience
-*"Fast forward to week 2. A developer reports a blocker: the shipping carrier's API is poorly documented and integration is taking longer than expected. Let's see how the roles coordinate."*
+*"Fast forward to week 2. Joao (Backend Lead) reports a blocker: the user authentication implementation is more complex than estimated. JWT token management and role-based access control is taking longer than expected. Let's see how the roles coordinate."*
 
 ### Step 2.1: Simulate Blocker Discovery (Manual Trigger to Risk)
 
 **Create trigger file:**
 ```bash
-cat > vaults/peaklogistics/agent/inbox/risk/2026-02-14T14-30-blocker-api.md << 'EOF'
+cat > vaults/peaklogistics/agent/inbox/risk/2026-02-14T14-30-blocker-auth.md << 'EOF'
 ---
 from: user
 date: 2026-02-14T14:30:00Z
@@ -132,11 +132,15 @@ priority: high
 
 **Blocker identified:**
 
-The team reports that the shipping carrier API (ShipFast) has poor documentation. Integration is taking 2x longer than estimated. Originally: 3 days. Now: likely 6 days.
+Joao (Backend Lead) reports that the user authentication implementation is more complex than estimated. JWT token management, session handling, and role-based access control (supplier vs shipper) is taking 2x longer than estimated.
+
+Originally: 2 days (per scope.md)
+Now: likely 4 days
 
 **Impact:**
-- Timeline: Pushes milestone "API integration complete" from 2026-02-21 to 2026-02-24
-- Dependencies: Delays testing phase start
+- Timeline: Pushes Week 2 milestone "User sign-up/login working" by 2 days
+- Dependencies: Blocks all user-specific features (posting shipments/trips)
+- Critical path: Authentication is a prerequisite for everything else
 
 **Request:**
 Assess this as a risk and recommend mitigation.
@@ -145,7 +149,7 @@ EOF
 
 **Show the file:**
 ```bash
-cat vaults/peaklogistics/agent/inbox/risk/2026-02-14T14-30-blocker-api.md
+cat vaults/peaklogistics/agent/inbox/risk/2026-02-14T14-30-blocker-auth.md
 ```
 
 **Talk track:**
@@ -197,8 +201,8 @@ python3 runner.py --role delivery
 
 **Expected behavior:**
 - Reads Risk's trigger from inbox
-- Updates `project/timeline.md` to reflect 3-day slip
-- Logs reasoning about whether this threatens overall delivery
+- Updates `project/timeline.md` to reflect 2-day slip in Week 2 milestone
+- Logs reasoning about whether this threatens overall delivery (Week 6 buffer can absorb)
 - Moves trigger to archive
 
 **Show Delivery's log:**
@@ -212,7 +216,7 @@ cat vaults/peaklogistics/project/timeline.md
 ```
 
 **Talk track:**
-> "Delivery Manager received the notification, assessed impact on overall timeline, updated the milestone dates, and determined this is manageable - we have buffer. If the timeline was at risk, it would likely draft a communication to stakeholders or ask me for guidance. This is the 24/7 awareness I mentioned - these roles are constantly monitoring and coordinating."
+> "Delivery Manager received the notification, assessed impact on overall timeline, updated the Week 2 milestone, and determined this is manageable - we have Week 6 buffer to absorb the slip. If the overall timeline was at risk, it would draft a communication to stakeholders or ask me for guidance. This is the 24/7 awareness I mentioned - these roles are constantly monitoring and coordinating."
 
 ---
 

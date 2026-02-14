@@ -91,7 +91,26 @@ Append a reflection to the reasoning log. Update `agent/memory/{role}.md` if pat
 
 Roles can ask the User questions by writing files to `agent/inbox/user/` with YAML frontmatter (`from:`, `to:`, `date:`, `status: open`).
 
-The User answers by moving the file to `agent/inbox/user/answered/` with their response.
+**How to answer questions:**
+
+1. **Read the question:**
+   ```bash
+   cat agent/inbox/user/YYYY-MM-DDTHH-MM-description.md
+   ```
+
+2. **Add your answer to the file:**
+   Open the file and append your answer (e.g., add an `## Answer` section at the bottom)
+
+3. **Move to answered folder:**
+   ```bash
+   mv agent/inbox/user/YYYY-MM-DDTHH-MM-description.md \
+      agent/inbox/user/answered/
+   ```
+
+4. **Route back to the role:**
+   ```bash
+   python3 runner.py --once
+   ```
 
 On each inbox check, `route_answered_questions()` automatically parses the `from:` field and moves answered files back to the originating role's inbox.
 
