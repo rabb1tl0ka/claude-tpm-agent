@@ -1,11 +1,25 @@
-# Status Updates
+# Project Updates
 
-## 2026-02-13 — Agent initialized
-- TPM AI Agent POC created. First cycle.
-- Project vault seeded with PeakLogistics RouteRunner V2 data.
+## Week 0 (Feb 14-16, 2026) - Kickoff
 
-## 2026-02-10 — Sprint 42 kickoff
-- Dynamic Re-routing and Driver Dashboard v2 in active development.
-- API auth v2 work started.
-- Customer ETA Notifications entering design phase.
-- Delivery Zones remains the primary blocker for complete V2 launch.
+**Status:** 🟢 Green (project kickoff, no issues yet)
+
+**This Week:**
+- Project kickoff completed
+- Loka team assigned: Joao (Backend), Zoran (Web), Gorjan (Design), Elena (QA), Bruno (TPM)
+- Stakeholder profiles documented (Marcus, Sarah, Jen)
+- Initial scope, timeline, and risk register established
+- Communication channels set up (Slack, calendar invites)
+
+**Next Week:**
+- Week 1 begins Feb 17
+- Database schema design (Joao + Sarah review)
+- UI wireframes (Gorjan + Jen review)
+- Dev environment setup
+- Hosting environment decision + provisioning
+
+**No Blockers**
+
+---
+
+*This file tracks high-level status and weekly progress. Updated by TPM or Delivery Manager role.*
