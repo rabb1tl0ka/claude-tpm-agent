@@ -1,5 +1,5 @@
 #!/bin/bash
-# reset-demo.sh - Reset vault to demo-ready state
+# demo-reset.sh - Reset vault to demo-ready state
 
 set -e  # Exit on error
 
@@ -23,6 +23,10 @@ find vaults/peaklogistics/agent/inbox -type f ! -name '.gitkeep' -delete 2>/dev/
 # Clean outboxes (keep .gitkeep)
 find vaults/peaklogistics/agent/outbox -type f ! -name '.gitkeep' -delete 2>/dev/null || true
 
+# Clean runner logs (auto-generated, recreated on each run)
+echo "🗑️  Cleaning runner logs..."
+rm -f logs/*.log 2>/dev/null || true
+
 # Reset sessions
 if [ -f "sessions/sessions.json" ]; then
     echo "🗑️  Removing sessions.json..."
@@ -34,5 +38,5 @@ echo "✅ Demo reset complete!"
 echo ""
 echo "📋 Next steps:"
 echo "   1. Verify: python3 runner.py --dry-run"
-echo "   2. Start demo: See DEMO-SCRIPT.md"
+echo "   2. Start demo: ./demo-automated.sh"
 echo ""

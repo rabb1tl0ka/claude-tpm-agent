@@ -77,7 +77,7 @@ vaults/peaklogistics/
 
 ## 🔄 Reset Mechanism
 
-**Script:** `reset-demo.sh`
+**Script:** `demo-reset.sh`
 
 Resets the vault to pristine "Day 0" state:
 - Git checkout to restore project files
@@ -86,7 +86,7 @@ Resets the vault to pristine "Day 0" state:
 
 **Usage:**
 ```bash
-./reset-demo.sh
+./demo-reset.sh
 python3 runner.py --dry-run  # Verify
 ```
 

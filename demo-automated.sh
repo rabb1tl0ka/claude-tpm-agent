@@ -5,6 +5,17 @@
 # Usage:
 #   ./demo-automated.sh              # Interactive mode (pauses for Enter)
 #   ./demo-automated.sh --no-wait    # Non-interactive mode (auto-continues)
+#
+#   # Save to file AND see in console                                                           
+#  ./demo-automated.sh | tee demo-run-$(date +%Y-%m-%d_%H%M%S).txt                           
+#                                                                                              
+#  Or to capture both stdout and stderr:                                                       
+#  ./demo-automated.sh 2>&1 | tee demo-run-$(date +%Y-%m-%d_%H%M%S).txt
+#
+#  What this does:
+#  - tee reads from stdin and writes to both stdout (console) AND the file
+#  - $(date +%Y-%m-%d_%H%M%S) creates timestamp like 2026-02-14_184432
+#  - 2>&1 captures errors too (optional)
 
 set -e  # Exit on error
 
@@ -101,8 +112,8 @@ wait_for_user "Press Enter to start the demo..."
 # =============================================================================
 
 narrate "First, let me reset the vault to a clean Day 0 state..."
-step "Running reset-demo.sh"
-./reset-demo.sh || error_exit "Reset script failed"
+step "Running demo-reset.sh"
+./demo-reset.sh || error_exit "Reset script failed"
 success "Vault reset complete"
 
 # Verify clean state
@@ -418,7 +429,7 @@ echo ""
 echo "The system is working as expected! 🚀"
 echo ""
 echo "To run a live demo:"
-echo "  1. Run: ./reset-demo.sh"
+echo "  1. Run: ./demo-reset.sh"
 echo "  2. Follow: DEMO-SCRIPT.md"
 echo "  3. Execute each step manually, explaining as you go"
 echo ""
