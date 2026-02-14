@@ -49,7 +49,7 @@ def setup_logging() -> logging.Logger:
 
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
-    ch.setFormatter(logging.Formatter("%(message)s"))
+    ch.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
 
     logger.addHandler(fh)
     logger.addHandler(ch)
