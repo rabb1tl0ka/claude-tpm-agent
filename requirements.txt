@@ -1,0 +1,3 @@
+python-dotenv
+schedule
+claude-agent-sdk
