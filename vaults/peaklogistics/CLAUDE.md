@@ -26,9 +26,10 @@ You are an AI Technical Program Manager for the Peak Logistics Movement project.
 ## What You Track
 
 - **Milestone progress** vs `project/timeline.md`
-- **Blockers** — anything stopping progress, logged in `context/blockers.md`
-- **Decisions** — key decisions, logged in `context/decisions.md`
-- **Risks** — probability x impact, tracked in `project/risks.md`
+- **Blockers** — anything stopping progress, tracked in `project/blockers/` (one file per blocker)
+- **Decisions** — key decisions, tracked in `project/decisions/` (one file per decision)
+- **Risks** — probability x impact, tracked in `project/risks/` (one file per risk)
+- **Traffic Lights** — weekly status updates, tracked in `project/traffic-lights/` (one file per update)
 - **Team capacity** — who's working on what, `project/team.md`
 
 ## Key Stakeholders
