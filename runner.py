@@ -109,13 +109,18 @@ def load_vault_system_prompt() -> str:
     """Load the vault's CLAUDE.md as the base system prompt."""
     claude_md = os.path.join(config.VAULT_PATH, "CLAUDE.md")
     if not os.path.isfile(claude_md):
+        log.info("CLAUDE.md not found. Defaulting to generic system prompt.")
         return "You are a TPM AI agent. Help manage the project."
     with open(claude_md) as f:
         return f.read()
 
 
 def load_role_context(role_cfg: dict) -> str:
-    """Read only the context files specified in the role config."""
+    """Read only the context files specified in the role config.
+
+    When a path is a directory, reads all .md files inside (sorted),
+    skipping archive/ subdirectories and .gitkeep files.
+    """
     parts = []
     for rel in role_cfg["context_files"]:
         full = os.path.join(config.VAULT_PATH, rel)
@@ -124,9 +129,21 @@ def load_role_context(role_cfg: dict) -> str:
                 content = f.read()
             parts.append(f"--- {rel} ---\n{content}")
         elif os.path.isdir(full):
-            entries = sorted(os.listdir(full))
-            listing = [e for e in entries if not e.startswith(".")]
-            parts.append(f"--- {rel} ---\n(directory: {', '.join(listing) if listing else 'empty'})")
+            dir_parts = []
+            for fn in sorted(os.listdir(full)):
+                if fn == ".gitkeep" or fn.startswith("."):
+                    continue
+                entry_path = os.path.join(full, fn)
+                if os.path.isdir(entry_path):
+                    continue  # skip archive/ and other subdirectories
+                if fn.endswith(".md"):
+                    with open(entry_path) as f:
+                        content = f.read()
+                    dir_parts.append(f"### {fn}\n{content}")
+            if dir_parts:
+                parts.append(f"--- {rel} ---\n" + "\n\n".join(dir_parts))
+            else:
+                parts.append(f"--- {rel} ---\n(empty directory)")
     return "\n\n".join(parts)
 
 
@@ -162,7 +179,7 @@ def has_inbox_items(role_name: str) -> bool:
 # Prompt building
 # ---------------------------------------------------------------------------
 
-def build_role_system_prompt(role_cfg: dict) -> str:
+def build_role_system_prompt(role_cfg: dict, log_file_path: str) -> str:
     """Build a role-specific system prompt with THINK/ACT/REFLECT cycle."""
     base = load_vault_system_prompt()
     role_name = role_cfg["name"]
@@ -176,6 +193,10 @@ def build_role_system_prompt(role_cfg: dict) -> str:
     role_prompt = f"""
 ## Your Role: {role_cfg['display_name']}
 
+**Project:** Peak Logistics Movement (PLM)
+**Your working directory:** `vaults/peaklogistics/`
+**This is the ONLY project you are working on.** If you see references to other projects, that's an error.
+
 ### Mission
 {role_cfg['mission']}
 
@@ -188,39 +209,49 @@ def build_role_system_prompt(role_cfg: dict) -> str:
 1. **NEVER send communications directly.** Always draft to `agent/outbox/{role_name}/drafts/`. Bruno reviews and approves.
 2. **Be concise.** Short, clear updates. No fluff. Logistics people value directness.
 3. **Flag risks early.** If something smells like a delay or blocker, surface it immediately.
-4. **Update context files.** When you learn something new, update `context/` so future cycles have it.
+4. **Update project files.** When you learn something new, update `project/` so future cycles have it.
 5. **Respect the vault as source of truth.** Read vault files before making assumptions.
 
 ## How to Work — THINK / ACT / REFLECT
 
 Your working directory is the project vault. All file paths are relative to it.
 
-### Phase 1: THINK
+## MANDATORY FIRST STEP: Write Your Log
 
-Write a structured reasoning log to `agent/logs/{role_name}/YYYY-MM-DDTHH-MM-<trigger>.md` where `<trigger>` is "scheduled", "inbox", or "manual" depending on why you were triggered.
+**BEFORE doing anything else**, you MUST append to your log file.
 
-Your reasoning log MUST include these sections:
+**Log file location:** `{{LOG_FILE_PATH}}`
+
+This file already exists. Use the Edit tool to append your new run section.
+
+**Required format:**
 
 ```
-# {role_cfg['display_name']} — YYYY-MM-DDTHH:MM Run
+## Run HH:MM (trigger-type)
 
-## Inbox
+### Inbox
 - (list items with priority, or "empty")
 
-## What Changed
+### What Changed
 - (changes since last run based on context files)
 
-## Priority Action
+### Priority Action
 - (what you will do this run and why)
 
-## Not Doing
+### Not Doing
 - (what you considered but deferred, and why)
 ```
+
+Where `trigger-type` is "scheduled", "inbox", or "manual".
+
+**Critical:** You MUST use the Edit tool to append this section. Do not just say you will write it - actually execute the Edit tool call. The system verifies that you wrote to the log.
+
+After writing your THINK section to the log, proceed to ACT and REFLECT.
 
 ### Phase 2: ACT
 
 Execute your priority action:
-- Update context files (`context/`) when you learn new information
+- Update project files (`project/`) when you learn new information
 - Write trigger files to other roles' inboxes when they need to know something
 - Draft communications to `agent/outbox/{role_name}/drafts/`
 - Ask questions to the User via `agent/inbox/user/` (see format below)
@@ -228,7 +259,7 @@ Execute your priority action:
 
 ### Phase 3: REFLECT
 
-Append a `## Reflection` section to your reasoning log:
+Append a `### Reflection` subsection to your current run section:
 - What went well? What was unclear?
 - Any patterns you're noticing across runs?
 
@@ -273,6 +304,8 @@ If you find answered questions or feedback in your inbox:
 2. Update `agent/memory/{role_name}.md` with any lessons learned
 3. Move the file to `{role_cfg['inbox']}archive/`
 """
+    # Replace log file path placeholder
+    role_prompt = role_prompt.replace("{{LOG_FILE_PATH}}", log_file_path)
     return base + "\n\n" + role_prompt
 
 
@@ -280,11 +313,41 @@ def build_role_message(role_cfg: dict) -> str:
     """Build the initial user message for a role-based run."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    current_time = datetime.now(timezone.utc).strftime("%H:%M")
 
     context = load_role_context(role_cfg)
     inbox = check_inbox(role_cfg)
 
+    # MANDATORY FIRST ACTION - make it impossible to miss
+    log_instruction = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 MANDATORY FIRST ACTION 🚨
+
+Your FIRST action MUST be to append your log entry to:
+  agent/logs/{role_cfg['name']}/{today}.md
+
+The file already exists with a header. Use the Edit tool to append this structure:
+
+## Run {current_time} (manual)
+
+### Inbox
+- (list inbox items with priority, or write "empty")
+
+### What Changed
+- (changes since last run based on context files below)
+
+### Priority Action
+- (what you will do this run and why)
+
+### Not Doing
+- (what you considered but deferred, and why)
+
+DO NOT do anything else before writing this log entry.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+
     parts = [
+        log_instruction,
+        "",
         f"Current time: {now}",
         f"Today's date: {today}",
         f"Role: {role_cfg['display_name']}",
@@ -305,6 +368,45 @@ def build_role_message(role_cfg: dict) -> str:
 # Running a role via Claude Code SDK
 # ---------------------------------------------------------------------------
 
+def ensure_log_file_exists(role_name: str) -> str:
+    """Ensure today's log file exists. Create with header if needed. Returns relative path."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    log_dir = os.path.join(config.VAULT_PATH, "agent", "logs", role_name)
+    log_path = os.path.join(log_dir, f"{today}.md")
+
+    # Ensure directory exists
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Create file with header if it doesn't exist
+    if not os.path.isfile(log_path):
+        with open(log_path, "w") as f:
+            f.write(f"# {role_name.title()} Log — {today}\n\n")
+        log.debug(f"[{role_name}] Created log file: {log_path}")
+
+    # Return relative path for agent instructions
+    return f"agent/logs/{role_name}/{today}.md"
+
+
+def verify_log_written(role_name: str, initial_size: int) -> bool:
+    """Verify that the agent wrote to its log file. Returns True if content was added."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    log_path = os.path.join(config.VAULT_PATH, "agent", "logs", role_name, f"{today}.md")
+
+    if not os.path.isfile(log_path):
+        log.error(f"[{role_name}] ❌ Log file disappeared: {log_path}")
+        return False
+
+    file_size = os.path.getsize(log_path)
+    if file_size == initial_size:
+        log.error(f"[{role_name}] ❌ Log file unchanged ({file_size} bytes). Agent did not write anything!")
+        log.error(f"[{role_name}]    This is a critical bug - agent claims to write but doesn't execute the tool.")
+        return False
+
+    added_bytes = file_size - initial_size
+    log.info(f"[{role_name}] ✓ Log written (+{added_bytes} bytes, total {file_size})")
+    return True
+
+
 async def run_role_async(role_name: str, reason: str):
     """Invoke Claude Code for a role run via the Agent SDK."""
     role_cfg = config.load_role(role_name)
@@ -312,7 +414,13 @@ async def run_role_async(role_name: str, reason: str):
     log.info(f"[{role_name}] Triggered — {reason}")
     log.info(f"[{role_name}] Model: {role_cfg['model']}")
 
-    system_prompt = build_role_system_prompt(role_cfg)
+    # Ensure log file exists and get its path + initial size
+    log_file_path = ensure_log_file_exists(role_name)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    log_full_path = os.path.join(config.VAULT_PATH, "agent", "logs", role_name, f"{today}.md")
+    initial_log_size = os.path.getsize(log_full_path)
+
+    system_prompt = build_role_system_prompt(role_cfg, log_file_path)
     user_message = build_role_message(role_cfg)
 
     log.debug(f"[{role_name}] System prompt: {len(system_prompt)} chars")
@@ -360,6 +468,9 @@ async def run_role_async(role_name: str, reason: str):
         # Save session for same-day resumption
         if new_session_id:
             save_session_id(role_name, new_session_id)
+
+        # Verify log was written
+        verify_log_written(role_name, initial_log_size)
 
     except Exception as e:
         error_str = str(e).lower()

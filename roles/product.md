@@ -15,8 +15,8 @@ Manage the scope and roadmap of the project. Align feature priorities with clien
 ## Context Files
 - project/scope.md
 - project/timeline.md
-- context/decisions.md
-- context/updates.md
+- project/decisions/
+- project/traffic-lights/
 - memory.md
 - agent/memory/product.md
 

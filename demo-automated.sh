@@ -142,7 +142,7 @@ success "Vault structure displayed"
 
 # Check key directories exist
 step "Verifying key directories exist..."
-for dir in stakeholders goals project context agent; do
+for dir in stakeholders project agent templates; do
     if [ ! -d "$VAULT/$dir" ]; then
         error_exit "Missing directory: $VAULT/$dir"
     fi
@@ -160,8 +160,8 @@ timeout 120 $PYTHON runner.py --role delivery || error_exit "Delivery Manager ru
 success "Delivery Manager completed first run"
 
 step "Checking for reasoning log..."
-DELIVERY_LOG=$(find $VAULT/agent/logs/delivery/ -name "*.md" -type f | head -1)
-if [ -z "$DELIVERY_LOG" ]; then
+DELIVERY_LOG="$VAULT/agent/logs/delivery/$(date +%Y-%m-%d).md"
+if [ ! -f "$DELIVERY_LOG" ]; then
     error_exit "No reasoning log created by Delivery Manager"
 fi
 success "Reasoning log created: $(basename "$DELIVERY_LOG")"
@@ -224,9 +224,8 @@ timeout 120 $PYTHON runner.py --role risk || error_exit "Risk Manager run failed
 success "Risk Manager processed blocker"
 
 step "Checking if Risk updated project files..."
-check_file_exists "$VAULT/project/risks.md"
-check_file_exists "$VAULT/context/blockers.md"
-success "Risk Manager updated risk register and blockers"
+check_dir_not_empty "$VAULT/project/risks"
+success "Risk Manager updated risk register"
 
 step "Checking if Risk archived the trigger..."
 if [ -f "$VAULT/agent/inbox/risk/2026-02-14T14-30-blocker-auth.md" ]; then
@@ -252,9 +251,9 @@ timeout 120 $PYTHON runner.py --role delivery || error_exit "Delivery Manager ru
 success "Delivery Manager responded to Risk notification"
 
 step "Checking Delivery's reasoning log..."
-DELIVERY_LOG_2=$(find $VAULT/agent/logs/delivery/ -name "*.md" -type f | tail -1)
-check_file_exists "$DELIVERY_LOG_2"
-success "Delivery created new reasoning log"
+DELIVERY_LOG="$VAULT/agent/logs/delivery/$(date +%Y-%m-%d).md"
+check_file_exists "$DELIVERY_LOG"
+success "Delivery appended to reasoning log"
 
 narrate "Perfect! Delivery Manager received the notification and assessed the impact."
 echo "The roles coordinated asynchronously - like a distributed team."
@@ -350,7 +349,7 @@ timeout 120 $PYTHON runner.py --role risk || error_exit "Risk Manager run failed
 success "Risk Manager assessed scope change risk"
 
 step "Checking Risk's output..."
-RISK_LOG=$(find $VAULT/agent/logs/risk/ -name "*.md" -type f | tail -1)
+RISK_LOG="$VAULT/agent/logs/risk/$(date +%Y-%m-%d).md"
 check_file_exists "$RISK_LOG"
 success "Risk documented assessment"
 

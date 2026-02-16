@@ -47,6 +47,21 @@ rm -f vaults/peaklogistics/agent/inbox/user/*
 2. File browser showing `vaults/peaklogistics/agent/` structure
 3. Text editor ready to create trigger files
 
+**Optional: Live log viewing (advanced demo)**
+Open 3 additional terminals with tail to watch reasoning in real-time:
+```bash
+# Terminal for Delivery logs
+tail -f vaults/peaklogistics/agent/logs/delivery/$(date +%Y-%m-%d).md
+
+# Terminal for Risk logs
+tail -f vaults/peaklogistics/agent/logs/risk/$(date +%Y-%m-%d).md
+
+# Terminal for Comms logs
+tail -f vaults/peaklogistics/agent/logs/comms/$(date +%Y-%m-%d).md
+```
+
+As roles run, their reasoning appears live in their windows. Very visual for technical audiences.
+
 ---
 
 ## Act 1: Project Setup & First Run (5-7 min)
@@ -65,8 +80,7 @@ tree -L 3 vaults/peaklogistics/
 ```
 
 **Key points to narrate:**
-- `project/` = source of truth (scope, timeline, team, risks)
-- `context/` = living state (blockers, updates, decisions)
+- `project/` = source of truth (scope, timeline, team, risks, blockers, decisions, goals, traffic-lights)
 - `agent/inbox/{role}/` = trigger mechanism (event-driven runs)
 - `agent/outbox/{role}/` = communication pipeline (drafts → approved → sent)
 - `agent/logs/{role}/` = reasoning artifacts (THINK/ACT/REFLECT)
@@ -83,17 +97,18 @@ python3 runner.py --role delivery
 > "Claude is reading the system prompt that defines the Delivery Manager role. It's loading all context files: scope, timeline, team, blockers, updates. It's checking its inbox - which is empty. Now it's writing a reasoning log to agent/logs/delivery/ following the THINK/ACT/REFLECT pattern. Watch the terminal..."
 
 **Expected output:**
-- Log file created: `agent/logs/delivery/YYYY-MM-DDTHH-MM-manual.md`
+- Log file created/appended: `agent/logs/delivery/YYYY-MM-DD.md`
 - Terminal shows preview of Claude's reasoning
 - Session ID saved for same-day resumption
 
 **Show the reasoning log:**
 ```bash
-cat vaults/peaklogistics/agent/logs/delivery/$(ls -t vaults/peaklogistics/agent/logs/delivery/ | head -1)
+cat vaults/peaklogistics/agent/logs/delivery/$(date +%Y-%m-%d).md
 ```
 
 **Key points in the log:**
-- **Inbox section:** "(empty)"
+- **Run section header:** `## Run 09:00 (manual)`
+- **Inbox subsection:** "(empty)"
 - **What Changed:** "First run - establishing baseline"
 - **Priority Action:** Likely reviewing timeline, checking for immediate concerns
 - **Not Doing:** Deferred items
@@ -167,21 +182,21 @@ python3 runner.py --role risk
 
 **Expected behavior:**
 - Reads the trigger file
-- Updates `project/risks.md` with new risk entry
-- Updates `context/blockers.md` with details
+- Creates/updates risk file in `project/risks/`
+- Creates blocker file in `project/blockers/`
 - Writes reasoning log to `agent/logs/risk/`
 - **Likely creates trigger file** in `agent/inbox/delivery/`
 - Moves processed trigger to `agent/inbox/risk/archive/`
 
 **Show the Risk log:**
 ```bash
-cat vaults/peaklogistics/agent/logs/risk/$(ls -t vaults/peaklogistics/agent/logs/risk/ | head -1)
+cat vaults/peaklogistics/agent/logs/risk/$(date +%Y-%m-%d).md
 ```
 
 **Check if Risk updated project files:**
 ```bash
-tail -20 vaults/peaklogistics/project/risks.md
-tail -10 vaults/peaklogistics/context/blockers.md
+ls vaults/peaklogistics/project/risks/
+ls vaults/peaklogistics/project/blockers/
 ```
 
 **Check if Risk notified Delivery:**
@@ -207,7 +222,7 @@ python3 runner.py --role delivery
 
 **Show Delivery's log:**
 ```bash
-cat vaults/peaklogistics/agent/logs/delivery/$(ls -t vaults/peaklogistics/agent/logs/delivery/ | head -1)
+cat vaults/peaklogistics/agent/logs/delivery/$(date +%Y-%m-%d).md
 ```
 
 **Show updated timeline:**
@@ -275,7 +290,7 @@ python3 runner.py --role comms
 **Check Comms actions:**
 ```bash
 # Check reasoning
-cat vaults/peaklogistics/agent/logs/comms/$(ls -t vaults/peaklogistics/agent/logs/comms/ | head -1)
+cat vaults/peaklogistics/agent/logs/comms/$(date +%Y-%m-%d).md
 
 # Check if notified other roles
 ls vaults/peaklogistics/agent/inbox/delivery/
@@ -325,7 +340,7 @@ python3 runner.py --role risk
 
 **Check Risk's output:**
 ```bash
-cat vaults/peaklogistics/agent/logs/risk/$(ls -t vaults/peaklogistics/agent/logs/risk/ | head -1)
+cat vaults/peaklogistics/agent/logs/risk/$(date +%Y-%m-%d).md
 ls vaults/peaklogistics/agent/inbox/user/
 ```
 
@@ -578,9 +593,9 @@ vaults/peaklogistics/agent/logs/risk/
 vaults/peaklogistics/agent/logs/comms/
 
 # Updated project context
-vaults/peaklogistics/project/risks.md
+vaults/peaklogistics/project/risks/
 vaults/peaklogistics/project/timeline.md
-vaults/peaklogistics/context/blockers.md
+vaults/peaklogistics/project/blockers/
 
 # Role memory
 vaults/peaklogistics/agent/memory/

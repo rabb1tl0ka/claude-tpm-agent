@@ -17,8 +17,8 @@ Enable the team to deliver by the planned finish date or earlier.
 - project/scope.md
 - project/timeline.md
 - project/team.md
-- context/blockers.md
-- context/updates.md
+- project/blockers/
+- project/traffic-lights/
 - memory.md
 - agent/memory/delivery.md
 

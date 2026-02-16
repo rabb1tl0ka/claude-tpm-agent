@@ -8,33 +8,30 @@ The test vault at `vaults/peaklogistics/` has been completely restructured to re
 
 ```
 vaults/peaklogistics/
-├── stakeholders/          [NEW] Client team profiles
+├── stakeholders/          Client team profiles
 │   ├── marcus-reed.md     - CEO (speed, competitive pressure)
 │   ├── sarah-chen.md      - CTO (technical rigor, API design)
 │   └── jen-walsh.md       - VP Product (UX, user validation)
-├── goals/                 [NEW] Project objectives
-│   └── launch-plm-v1.md   - Launch marketplace MVP in 6 weeks
-├── actions/               [NEW] Agent recommendations (empty at start)
-├── challenges/            [NEW] Project challenges (empty at start)
-├── traffic-lights/        [NEW] Weekly TLU reports (empty at start, Week 2+)
-├── project/               [UPDATED] Core project docs
+├── project/               Core project docs + tracked items
 │   ├── scope.md           - 5 core features, 6-week timeline
 │   ├── timeline.md        - Weekly milestones (Feb 17 - Mar 28)
 │   ├── team.md            - Loka team (Joao, Zoran, Gorjan, Elena, Bruno)
-│   └── risks.md           - 3 initial risks (timeline, data model, adoption)
-├── context/               [UPDATED] Living state
-│   ├── blockers.md        - Empty (no blockers at kickoff)
-│   ├── decisions.md       - 4 kickoff decisions (tech stack choices)
-│   └── updates.md         - Week 0 status (green, no issues)
-├── agent/                 [EXISTING] Agent workspace
+│   ├── goals/             - Project objectives (1 file per goal)
+│   ├── risks/             - Risk register (1 file per risk)
+│   ├── blockers/          - Active blockers (1 file per blocker, archive/ subdir)
+│   ├── decisions/         - Key decisions (1 file per decision)
+│   ├── challenges/        - Project challenges (1 file per challenge)
+│   └── traffic-lights/    - Weekly TLU reports (1 file per week)
+├── templates/             Templates (TLU template, etc.)
+├── agent/                 Agent workspace
 │   ├── inbox/{role}/      - Trigger files
 │   ├── outbox/{role}/     - Draft communications
 │   ├── logs/{role}/       - Reasoning logs (THINK/ACT/REFLECT)
 │   └── memory/{role}.md   - Per-role persistent memory
-├── meetings/              [EXISTING]
-├── daily/                 [EXISTING]
-├── memory.md              [EXISTING]
-└── CLAUDE.md              [UPDATED] Agent system prompt
+├── meetings/
+├── daily/
+├── memory.md
+└── CLAUDE.md              Agent system prompt
 ```
 
 ## 🎭 The Scenario

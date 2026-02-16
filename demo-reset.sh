@@ -27,10 +27,19 @@ find vaults/peaklogistics/agent/outbox -type f ! -name '.gitkeep' -delete 2>/dev
 echo "🗑️  Cleaning runner logs..."
 rm -f logs/*.log 2>/dev/null || true
 
+# Clean project generated agent roles .md files
+echo "🗑️  Cleaning project generated .mf files..."
+rm -f vaults/peaklogistics/project/blockers/*.md
+rm -f vaults/peaklogistics/project/challenges/*.md
+rm -f vaults/peaklogistics/project/decisions/*.md
+rm -f vaults/peaklogistics/project/risks/*.md
+rm -f vaults/peaklogistics/project/traffic-lights/*.md
+
+
 # Reset sessions
-if [ -f "sessions/sessions.json" ]; then
+if [ -f ".sessions/sessions.json" ]; then
     echo "🗑️  Removing sessions.json..."
-    rm -f sessions/sessions.json
+    rm -f .sessions/sessions.json
 fi
 
 echo ""

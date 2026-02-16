@@ -90,9 +90,9 @@ The single-agent approach captures ~80% of the multi-agent benefit at ~20% of th
 │                    Vault                          │
 │  (shared state — the "message bus")              │
 │                                                  │
-│  project/    — scope, timeline, team, risks      │
-│  context/    — blockers, updates, decisions       │
-│  comms/      — outbox, approved, sent            │
+│  project/    — scope, timeline, team, risks,      │
+│               blockers, decisions, goals,         │
+│               challenges, traffic-lights          │
 │  agent/      — TPM AI Agent's workspace          │
 │    inbox/    — trigger files per role            │
 │  daily/      — run logs                          │
@@ -122,8 +122,8 @@ Enable the team to deliver by the planned finish date or earlier.
 - project/scope.md
 - project/timeline.md
 - project/team.md
-- context/blockers.md
-- context/updates.md
+- project/blockers/
+- project/traffic-lights/
 - memory.md
 
 ## Tools
@@ -180,7 +180,7 @@ priority: high
 
 Authentication module delivery is now 3 days behind schedule.
 This may delay the overall project timeline by 1 week.
-The Delivery Manager has updated context/blockers.md with details.
+The Delivery Manager has logged the blocker in project/blockers/ with details.
 ```
 
 **Three trigger sources, one mechanism:**
@@ -219,7 +219,7 @@ After a role processes its inbox files, it archives or deletes them.
 
 - **provider.py** — Multi-provider abstraction works as-is
 - **tools.py** — All vault and Slack tools work as-is
-- **Vault structure** — project/, context/, comms/, daily/ unchanged
+- **Vault structure** — project/, agent/, daily/ unchanged
 - **--vault-only flag** — Still useful for testing without Slack
 - **Logging** — Same approach, now per-role per-run
 

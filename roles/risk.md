@@ -13,11 +13,11 @@ Identify risks that can impact the project and develop mitigation plans to prote
 - Escalate critical risks that need User attention
 
 ## Context Files
-- project/risks.md
+- project/risks/
 - project/timeline.md
-- context/blockers.md
-- context/updates.md
-- context/decisions.md
+- project/blockers/
+- project/traffic-lights/
+- project/decisions/
 - memory.md
 - agent/memory/risk.md
 
