@@ -178,10 +178,10 @@ options = ClaudeAgentOptions(
 
 This means we CAN have vault safety boundaries even with Claude Code — by defining custom MCP tools that enforce the `_resolve()` path check, and only allowing those tools (not the built-in Read/Write).
 
-## Architecture for the New Repo (Claude-TPM-Agent)
+## Architecture for the New Repo (claude-tpm-agent)
 
 ```
-Claude-TPM-Agent/
+claude-tpm-agent/
 ├── runner.py          # Schedule + inbox watching (same as current)
 ├── roles/             # Role configs as .md (same as current)
 │   ├── delivery.md
@@ -237,7 +237,7 @@ Can be tuned based on real output quality.
 ## Decision
 
 - **This repo (tpm-ai-agent)**: Keep as-is with API-based provider architecture
-- **New repo (Claude-TPM-Agent)**: Build Option B using Claude Code Agent SDK
+- **New repo (claude-tpm-agent)**: Build Option B using Claude Code Agent SDK
 - Both repos share the same vault structure, role configs, and inbox pattern
 - The new repo is a clean reimplementation, not a port
 

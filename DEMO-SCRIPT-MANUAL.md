@@ -21,7 +21,7 @@ Peak Logistics hired Loka for a 6-week project to build a shipment tracking dash
 
 **Verify system is ready:**
 ```bash
-cd /home/rabb1tl0ka/loka/code/Claude-TPM-Agent
+cd /home/rabb1tl0ka/loka/code/claude-tpm-agent
 python3 runner.py --dry-run  # Should show 4 roles loaded
 ls vaults/peaklogistics/project/  # Should show scope.md, timeline.md, etc.
 ```
