@@ -20,6 +20,10 @@ ROLES_DIR = os.path.join(os.path.dirname(__file__), "roles")
 # Session tracking directory
 SESSIONS_DIR = os.path.join(os.path.dirname(__file__), ".sessions")
 
+# Slack channel — derived from vault name, overridable via env var
+_vault_name = os.path.basename(VAULT_PATH)  # e.g. "peaklogistics"
+SLACK_CHANNEL = os.environ.get("SLACK_CHANNEL", f"#{_vault_name}-agent")  # "#peaklogistics-agent"
+
 
 # ---------------------------------------------------------------------------
 # Role config parser

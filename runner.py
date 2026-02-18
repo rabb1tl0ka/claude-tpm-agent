@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 import schedule
 
 import config
+import slack_bridge
 from claude_agent_sdk import (
     ClaudeAgentOptions,
     ResultMessage,
@@ -449,6 +450,7 @@ async def run_role_async(role_name: str, reason: str):
 
     try:
         new_session_id = None
+        cost_usd = None
         async for message in query(prompt=user_message, options=options):
             if isinstance(message, AssistantMessage):
                 for block in message.content:
@@ -461,7 +463,8 @@ async def run_role_async(role_name: str, reason: str):
                     new_session_id = message.session_id
 
             elif isinstance(message, ResultMessage):
-                log.info(f"[{role_name}] Done. Duration: {message.duration_ms}ms, Cost: ${message.total_cost_usd:.4f}")
+                cost_usd = message.total_cost_usd
+                log.info(f"[{role_name}] Done. Duration: {message.duration_ms}ms, Cost: ${cost_usd:.4f}")
                 if hasattr(message, "session_id") and message.session_id:
                     new_session_id = message.session_id
 
@@ -471,6 +474,10 @@ async def run_role_async(role_name: str, reason: str):
 
         # Verify log was written
         verify_log_written(role_name, initial_log_size)
+
+        # Post run summary to Slack
+        if slack_bridge.is_enabled():
+            await slack_bridge.post_role_run_summary(role_name, cost_usd, log_file_path)
 
     except Exception as e:
         error_str = str(e).lower()
@@ -667,6 +674,9 @@ def main():
     log.info(f"Roles: {', '.join(roles)}")
     log.info(f"Vault: {os.path.abspath(config.VAULT_PATH)}")
 
+    # Ensure Slack state directory exists
+    os.makedirs(os.path.join(config.VAULT_PATH, "agent", "slack"), exist_ok=True)
+
     # Single role mode
     if args.role:
         if args.role not in roles:
@@ -693,6 +703,10 @@ def main():
             schedule.run_pending()
             check_all_inboxes(dry_run=args.dry_run)
             asyncio.run(compile_daily_summary())
+            if not args.dry_run and slack_bridge.is_enabled():
+                asyncio.run(slack_bridge.check_slack_inbound())       # Slack → vault
+                asyncio.run(slack_bridge.post_new_user_questions())   # vault → Slack
+                asyncio.run(slack_bridge.post_new_drafts())           # vault → Slack
             time.sleep(60)
     except KeyboardInterrupt:
         log.info("Runner stopped.")
