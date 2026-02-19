@@ -250,10 +250,27 @@ Post now.
 # Inbound: read Slack for commands → write trigger files
 # ---------------------------------------------------------------------------
 
+_INBOUND_INTERVAL_SECS = 300  # check Slack inbound at most every 5 minutes
+
+
 async def check_slack_inbound() -> None:
-    """Read Slack since last_inbound_check. Write trigger files for 'run <role>' commands."""
+    """Read Slack since last_inbound_check. Write trigger files for 'run <role>' commands.
+
+    Skips the agent spawn entirely if checked less than _INBOUND_INTERVAL_SECS ago.
+    """
     state = _load_state()
     last_check = state.get("last_inbound_check", "")
+
+    # Gate: skip if checked recently enough
+    if last_check:
+        try:
+            from datetime import datetime, timezone
+            last_dt = datetime.fromisoformat(last_check.replace("Z", "+00:00"))
+            elapsed = (datetime.now(timezone.utc) - last_dt).total_seconds()
+            if elapsed < _INBOUND_INTERVAL_SECS:
+                return
+        except Exception:
+            pass
     valid_roles = config.list_roles()
     roles_list = ", ".join(valid_roles)
 
