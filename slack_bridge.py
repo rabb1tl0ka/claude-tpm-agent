@@ -217,9 +217,10 @@ Do all of this now. Do not skip any file.
 # ---------------------------------------------------------------------------
 
 async def post_role_run_summary(role_name: str, cost_usd: float | None, log_path: str) -> None:
-    """Post a brief 2-line summary after a role run completes."""
+    """Post the full latest run section from the role log to Slack."""
     cost_str = f"${cost_usd:.4f}" if cost_usd is not None else "unknown"
-    prompt = f"""You are the TPM Agent Slack bridge. Post a brief run summary to Slack.
+    channel_name = SLACK_CHANNEL.lstrip("#")
+    prompt = f"""You are the TPM Agent Slack bridge. Post a role run log to Slack.
 
 Slack channel: {SLACK_CHANNEL}
 Vault root: {_vault_abs()}
@@ -229,15 +230,20 @@ Cost: {cost_str}
 Log file: {log_path}
 
 Instructions:
-1. Read the log file at {_vault_abs()}/{log_path}
-2. Extract only the most recent run section (last "## Run HH:MM" block)
-3. Post a concise 2-line summary to {SLACK_CHANNEL}:
-   "*[{role_name} run complete]* Cost: {cost_str}"
-   Then one line summarizing the Priority Action from the log.
+1. Use slack_search_channels with query="{channel_name}" to get the channel ID.
 
-Keep it short. Just those two lines. Post now.
+2. Read the log file at {_vault_abs()}/{log_path}
+
+3. Extract the most recent run section — everything from the last "## Run HH:MM" header
+   to the end of the file (including Inbox, What Changed, Priority Action, Not Doing, Reflection).
+
+4. Post to the channel ID from step 1 using slack_send_message:
+   Header line: "*[{role_name}]* run complete · cost {cost_str}"
+   Then the full extracted run section as-is (markdown preserved).
+
+Post now.
 """
-    await _run_haiku(prompt, max_turns=3, label=f"slack-summary-{role_name}")
+    await _run_haiku(prompt, max_turns=4, label=f"slack-summary-{role_name}")
 
 
 # ---------------------------------------------------------------------------
