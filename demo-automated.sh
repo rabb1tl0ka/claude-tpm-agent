@@ -156,7 +156,7 @@ echo ""
 wait_for_user "Press Enter to run Delivery Manager..."
 
 step "Running: python3 runner.py --role delivery"
-timeout 120 $PYTHON runner.py --role delivery || error_exit "Delivery Manager run failed or timed out"
+timeout 300 $PYTHON runner.py --role delivery || error_exit "Delivery Manager run failed or timed out"
 success "Delivery Manager completed first run"
 
 step "Checking for reasoning log..."
@@ -222,7 +222,7 @@ echo ""
 wait_for_user "Press Enter to run Risk Manager..."
 
 step "Running: python3 runner.py --role risk"
-timeout 120 $PYTHON runner.py --role risk || error_exit "Risk Manager run failed or timed out"
+timeout 300 $PYTHON runner.py --role risk || error_exit "Risk Manager run failed or timed out"
 success "Risk Manager processed blocker"
 
 step "Checking if Risk updated project files..."
@@ -249,7 +249,7 @@ echo ""
 wait_for_user "Press Enter to run Delivery Manager..."
 
 step "Running: python3 runner.py --role delivery"
-timeout 120 $PYTHON runner.py --role delivery || error_exit "Delivery Manager run failed"
+timeout 300 $PYTHON runner.py --role delivery || error_exit "Delivery Manager run failed"
 success "Delivery Manager responded to Risk notification"
 
 step "Checking Delivery's reasoning log..."
@@ -305,7 +305,7 @@ echo ""
 wait_for_user "Press Enter to run Comms Manager..."
 
 step "Running: python3 runner.py --role comms"
-timeout 120 $PYTHON runner.py --role comms || error_exit "Comms Manager run failed"
+timeout 300 $PYTHON runner.py --role comms || error_exit "Comms Manager run failed"
 success "Comms Manager processed client request"
 
 step "Checking if Comms notified other roles..."
@@ -329,7 +329,7 @@ echo ""
 wait_for_user "Press Enter to run Delivery Manager..."
 
 step "Running: python3 runner.py --role delivery"
-timeout 120 $PYTHON runner.py --role delivery || error_exit "Delivery Manager run failed"
+timeout 300 $PYTHON runner.py --role delivery || error_exit "Delivery Manager run failed"
 success "Delivery Manager analyzed request"
 
 step "Checking if Delivery asked the User a question..."
@@ -347,7 +347,7 @@ echo ""
 wait_for_user "Press Enter to run Risk Manager..."
 
 step "Running: python3 runner.py --role risk"
-timeout 120 $PYTHON runner.py --role risk || error_exit "Risk Manager run failed"
+timeout 300 $PYTHON runner.py --role risk || error_exit "Risk Manager run failed"
 success "Risk Manager assessed scope change risk"
 
 step "Checking Risk's output..."

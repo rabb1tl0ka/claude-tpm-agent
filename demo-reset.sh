@@ -30,13 +30,15 @@ find vaults/peaklogistics/agent/slack -type f ! -name '.gitkeep' -delete 2>/dev/
 echo "🗑️  Cleaning runner logs..."
 rm -f logs/*.log 2>/dev/null || true
 
-# Clean project generated agent roles .md files
-echo "🗑️  Cleaning project generated .mf files..."
+# Clean project generated agent files (subdirs + untracked top-level files)
+echo "🗑️  Cleaning project generated files..."
 rm -f vaults/peaklogistics/project/blockers/*.md
 rm -f vaults/peaklogistics/project/challenges/*.md
 rm -f vaults/peaklogistics/project/decisions/*.md
 rm -f vaults/peaklogistics/project/risks/*.md
 rm -f vaults/peaklogistics/project/traffic-lights/*.md
+# Remove untracked top-level project files (agent-generated, not committed)
+git ls-files --others --exclude-standard vaults/peaklogistics/project/*.md 2>/dev/null | xargs rm -f 2>/dev/null || true
 
 
 # Reset sessions
