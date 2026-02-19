@@ -23,6 +23,9 @@ find vaults/peaklogistics/agent/inbox -type f ! -name '.gitkeep' -delete 2>/dev/
 # Clean outboxes (keep .gitkeep)
 find vaults/peaklogistics/agent/outbox -type f ! -name '.gitkeep' -delete 2>/dev/null || true
 
+# Clean Slack state (reset posted dedup and inbound checkpoint)
+find vaults/peaklogistics/agent/slack -type f ! -name '.gitkeep' -delete 2>/dev/null || true
+
 # Clean runner logs (auto-generated, recreated on each run)
 echo "🗑️  Cleaning runner logs..."
 rm -f logs/*.log 2>/dev/null || true
