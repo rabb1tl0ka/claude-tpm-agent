@@ -189,10 +189,12 @@ echo ""
 wait_for_user "Press Enter to continue..."
 
 step "Creating blocker trigger for Risk Manager..."
-cat > $VAULT/agent/inbox/risk/2026-02-14T14-30-blocker-auth.md << 'EOF'
+BLOCKER_TS=$(date +%Y-%m-%dT%H-%M)
+BLOCKER_FILE="$VAULT/agent/inbox/risk/${BLOCKER_TS}-blocker-auth.md"
+cat > "$BLOCKER_FILE" << EOF
 ---
 from: user
-date: 2026-02-14T14:30:00Z
+date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 priority: high
 ---
 
@@ -228,7 +230,7 @@ check_dir_not_empty "$VAULT/project/risks"
 success "Risk Manager updated risk register"
 
 step "Checking if Risk archived the trigger..."
-if [ -f "$VAULT/agent/inbox/risk/2026-02-14T14-30-blocker-auth.md" ]; then
+if [ -f "$BLOCKER_FILE" ]; then
     error_exit "Trigger file not archived (still in inbox)"
 fi
 success "Trigger file was processed and archived"
@@ -272,10 +274,10 @@ echo ""
 wait_for_user "Press Enter to continue..."
 
 step "Creating client request trigger for Comms Manager..."
-cat > $VAULT/agent/inbox/comms/2026-02-14T15-00-client-request.md << 'EOF'
+cat > "$VAULT/agent/inbox/comms/$(date +%Y-%m-%dT%H-%M)-client-request.md" << EOF
 ---
 from: user
-date: 2026-02-14T15:00:00Z
+date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 priority: high
 ---
 
@@ -393,9 +395,9 @@ for role in delivery risk comms; do
 done
 
 step "Checking session management..."
-if [ -f "sessions/sessions.json" ]; then
+if [ -f ".sessions/sessions.json" ]; then
     success "Session file exists (roles will resume same-day context)"
-    cat sessions/sessions.json
+    cat .sessions/sessions.json
 else
     echo "    (No sessions yet - will be created after first role run)"
 fi
