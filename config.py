@@ -48,6 +48,17 @@ def _parse_sections(text: str) -> dict[str, str]:
     return sections
 
 
+def _parse_key_value(text: str) -> dict[str, str]:
+    """Parse 'key: value' lines from a section (e.g. ## Slack)."""
+    result = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if ":" in line:
+            key, _, value = line.partition(":")
+            result[key.strip()] = value.strip()
+    return result
+
+
 def _parse_bullet_list(text: str) -> list[str]:
     """Extract items from a Markdown bullet list."""
     items = []
@@ -94,6 +105,7 @@ def load_role(role_name: str) -> dict:
         "schedule": sections.get("schedule", ""),
         "inbox": sections.get("inbox", "").strip(),
         "preferences": sections.get("user preferences", ""),
+        "slack": _parse_key_value(sections.get("slack", "")),
     }
 
 

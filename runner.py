@@ -163,6 +163,28 @@ def check_inbox(role_cfg: dict) -> str:
     return "\n\n".join(files)
 
 
+def archive_inbox(role_cfg: dict) -> int:
+    """Move all trigger files from the role's inbox to inbox/archive/.
+
+    Called after build_role_message() has already read the inbox content into
+    the user message. Python owns archiving — not delegated to the agent.
+    Returns number of files archived.
+    """
+    inbox_path = os.path.join(config.VAULT_PATH, role_cfg["inbox"])
+    archive_path = os.path.join(inbox_path, "archive")
+    if not os.path.isdir(inbox_path):
+        return 0
+    os.makedirs(archive_path, exist_ok=True)
+    count = 0
+    for fn in sorted(os.listdir(inbox_path)):
+        full = os.path.join(inbox_path, fn)
+        if os.path.isfile(full) and fn != ".gitkeep" and not fn.startswith("."):
+            dest = os.path.join(archive_path, fn)
+            os.rename(full, dest)
+            count += 1
+    return count
+
+
 def has_inbox_items(role_name: str) -> bool:
     """Check if a role's inbox has unprocessed trigger files."""
     role_cfg = config.load_role(role_name)
@@ -217,24 +239,20 @@ def build_role_system_prompt(role_cfg: dict, log_file_path: str) -> str:
 
 Your working directory is the project vault. All file paths are relative to it.
 
-## MANDATORY FIRST STEP: Write Your Log
+## MANDATORY FIRST STEP: Complete Your Log Section
 
-**BEFORE doing anything else**, you MUST append to your log file.
+The system has already written the `## Run HH:MM` header to your log file.
 
 **Log file location:** `{{LOG_FILE_PATH}}`
 
-This file already exists. Use the Edit tool to append your new run section.
-
-**Required format:**
+**Your first tool call MUST be Edit.** Append these subsections immediately — do not read any project files first. Use the inbox content from the user message.
 
 ```
-## Run HH:MM (trigger-type)
-
 ### Inbox
-- (list items with priority, or "empty")
+- (list inbox items with priority, or "empty")
 
 ### What Changed
-- (changes since last run based on context files)
+- (best-effort summary — you can update after reading context)
 
 ### Priority Action
 - (what you will do this run and why)
@@ -243,11 +261,9 @@ This file already exists. Use the Edit tool to append your new run section.
 - (what you considered but deferred, and why)
 ```
 
-Where `trigger-type` is "scheduled", "inbox", or "manual".
+Execute Edit NOW. The system verifies the log was written.
 
-**Critical:** You MUST use the Edit tool to append this section. Do not just say you will write it - actually execute the Edit tool call. The system verifies that you wrote to the log.
-
-After writing your THINK section to the log, proceed to ACT and REFLECT.
+After appending these subsections, proceed to ACT and REFLECT.
 
 ### Phase 2: ACT
 
@@ -256,7 +272,7 @@ Execute your priority action:
 - Write trigger files to other roles' inboxes when they need to know something
 - Draft communications to `agent/outbox/{role_name}/drafts/`
 - Ask questions to the User via `agent/inbox/user/` (see format below)
-- After processing inbox files, move them to `{role_cfg['inbox']}archive/`
+- Inbox files are archived automatically — no need to move them
 
 ### Phase 3: REFLECT
 
@@ -303,14 +319,13 @@ priority: low|medium|high
 If you find answered questions or feedback in your inbox:
 1. Read and incorporate the feedback
 2. Update `agent/memory/{role_name}.md` with any lessons learned
-3. Move the file to `{role_cfg['inbox']}archive/`
 """
     # Replace log file path placeholder
     role_prompt = role_prompt.replace("{{LOG_FILE_PATH}}", log_file_path)
     return base + "\n\n" + role_prompt
 
 
-def build_role_message(role_cfg: dict) -> str:
+def build_role_message(role_cfg: dict, trigger_type: str = "manual") -> str:
     """Build the initial user message for a role-based run."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -319,22 +334,25 @@ def build_role_message(role_cfg: dict) -> str:
     context = load_role_context(role_cfg)
     inbox = check_inbox(role_cfg)
 
-    # MANDATORY FIRST ACTION - make it impossible to miss
+    # MANDATORY FIRST ACTION
+    # Python has already written "## Run HH:MM (trigger-type)" to the log.
+    # Agent's only job here: call Edit NOW to append the subsections.
     log_instruction = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚨 MANDATORY FIRST ACTION 🚨
 
-Your FIRST action MUST be to append your log entry to:
+The system has written the `## Run {current_time} ({trigger_type})` header to your log.
+
+Your FIRST tool call MUST be Edit — append the subsections to:
   agent/logs/{role_cfg['name']}/{today}.md
 
-The file already exists with a header. Use the Edit tool to append this structure:
-
-## Run {current_time} (manual)
+Use the inbox content already provided below (do NOT read files first).
+Append exactly this structure:
 
 ### Inbox
 - (list inbox items with priority, or write "empty")
 
 ### What Changed
-- (changes since last run based on context files below)
+- (best-effort from context below — update later if needed)
 
 ### Priority Action
 - (what you will do this run and why)
@@ -342,7 +360,7 @@ The file already exists with a header. Use the Edit tool to append this structur
 ### Not Doing
 - (what you considered but deferred, and why)
 
-DO NOT do anything else before writing this log entry.
+CALL Edit NOW. Do not read any files first.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -388,6 +406,27 @@ def ensure_log_file_exists(role_name: str) -> str:
     return f"agent/logs/{role_name}/{today}.md"
 
 
+def _trigger_type(reason: str) -> str:
+    """Map run reason to a short trigger-type label for the log header."""
+    if "inbox" in reason.lower():
+        return "inbox"
+    if "scheduled" in reason.lower():
+        return "scheduled"
+    return "manual"
+
+
+def write_initial_log_section(log_full_path: str, trigger_type: str) -> None:
+    """Python pre-writes the ## Run HH:MM header to the log before spawning the agent.
+
+    This guarantees the log has a Run section even if the agent misbehaves.
+    The agent's job is then to append the subsections (Inbox, What Changed, etc.).
+    """
+    current_time = datetime.now(timezone.utc).strftime("%H:%M")
+    section = f"\n## Run {current_time} ({trigger_type})\n\n"
+    with open(log_full_path, "a") as f:
+        f.write(section)
+
+
 def verify_log_written(role_name: str, initial_size: int) -> bool:
     """Verify that the agent wrote to its log file. Returns True if content was added."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -415,14 +454,25 @@ async def run_role_async(role_name: str, reason: str):
     log.info(f"[{role_name}] Triggered — {reason}")
     log.info(f"[{role_name}] Model: {role_cfg['model']}")
 
-    # Ensure log file exists and get its path + initial size
+    # Ensure log file exists and get its path
     log_file_path = ensure_log_file_exists(role_name)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     log_full_path = os.path.join(config.VAULT_PATH, "agent", "logs", role_name, f"{today}.md")
+
+    # Python pre-writes the ## Run header so the log always has a Run section
+    trigger_type = _trigger_type(reason)
+    write_initial_log_section(log_full_path, trigger_type)
+
+    # Capture size AFTER Python write — agent must add subsections beyond this
     initial_log_size = os.path.getsize(log_full_path)
 
     system_prompt = build_role_system_prompt(role_cfg, log_file_path)
-    user_message = build_role_message(role_cfg)
+    user_message = build_role_message(role_cfg, trigger_type)
+
+    # Archive inbox files now — content is already in user_message
+    archived = archive_inbox(role_cfg)
+    if archived:
+        log.info(f"[{role_name}] Archived {archived} inbox file(s)")
 
     log.debug(f"[{role_name}] System prompt: {len(system_prompt)} chars")
     log.debug(f"[{role_name}] User message: {len(user_message)} chars")
@@ -475,9 +525,9 @@ async def run_role_async(role_name: str, reason: str):
         # Verify log was written
         verify_log_written(role_name, initial_log_size)
 
-        # Post run summary to Slack
+        # Post run log to Slack
         if slack_bridge.is_enabled():
-            await slack_bridge.post_role_run_summary(role_name, cost_usd, log_file_path)
+            await slack_bridge.post_role_run_log(role_name, role_cfg, cost_usd, log_file_path)
 
     except Exception as e:
         error_str = str(e).lower()
@@ -489,8 +539,6 @@ async def run_role_async(role_name: str, reason: str):
 
 def run_role(role_name: str, reason: str, dry_run: bool = False):
     """Sync wrapper for run_role_async. Used by the scheduler."""
-    log.info(f"[{role_name}] Triggered — {reason}")
-
     if dry_run:
         role_cfg = config.load_role(role_name)
         log.info(f"[{role_name}] DRY RUN — model: {role_cfg['model']}, tools: {role_cfg['tools']}")
@@ -689,6 +737,8 @@ def main():
     if args.once:
         log.info("Mode: single check")
         check_all_inboxes(dry_run=args.dry_run)
+        if not args.dry_run and slack_bridge.is_enabled():
+            asyncio.run(slack_bridge.post_inter_agent_messages())
         log.info("Done.")
         return
 
@@ -704,9 +754,10 @@ def main():
             check_all_inboxes(dry_run=args.dry_run)
             asyncio.run(compile_daily_summary())
             if not args.dry_run and slack_bridge.is_enabled():
-                asyncio.run(slack_bridge.check_slack_inbound())       # Slack → vault
-                asyncio.run(slack_bridge.post_new_user_questions())   # vault → Slack
-                asyncio.run(slack_bridge.post_new_drafts())           # vault → Slack
+                asyncio.run(slack_bridge.check_slack_inbound())           # Slack → vault
+                asyncio.run(slack_bridge.post_new_user_questions())       # vault → Slack
+                asyncio.run(slack_bridge.post_new_drafts())               # vault → Slack
+                asyncio.run(slack_bridge.post_inter_agent_messages())     # vault → Slack
             time.sleep(60)
     except KeyboardInterrupt:
         log.info("Runner stopped.")

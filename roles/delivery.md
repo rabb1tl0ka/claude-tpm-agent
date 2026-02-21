@@ -1,7 +1,7 @@
 # Delivery Manager
 
 ## Model
-sonnet
+haiku
 
 ## Mission
 Keep the project delivery on-time and aligned with client priorities.
@@ -33,6 +33,11 @@ Enable the team to deliver by the planned finish date or earlier.
 
 ## Inbox
 agent/inbox/delivery/
+
+## Slack
+username: Delivery Manager
+emoji: :truck:
+mention: @delivery-manager
 
 ## User Preferences
 (No preferences configured yet. The User can add preferences here to control how this role behaves.)

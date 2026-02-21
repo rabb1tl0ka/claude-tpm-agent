@@ -1,7 +1,7 @@
 # Communication Manager
 
 ## Model
-sonnet
+haiku
 
 ## Mission
 Keep all stakeholders informed through timely, clear communication. Handle Slack coordination, internal status updates, and client reports.
@@ -35,6 +35,11 @@ Every 30 minutes, weekdays
 
 ## Inbox
 agent/inbox/comms/
+
+## Slack
+username: Comms Manager
+emoji: :speech_balloon:
+mention: @comms-manager
 
 ## User Preferences
 (No preferences configured yet. The User can add preferences here to control how this role behaves.)
