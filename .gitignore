@@ -2,3 +2,13 @@
 .obsidian/
 *pycache*
 logs/
+.sessions/
+agent/
+
+# Vault runtime state — only scaffold (.gitkeep, CLAUDE.md) and seed data in git
+vaults/peaklogistics/agent/inbox/**/*.md
+vaults/peaklogistics/agent/outbox/**/*.md
+vaults/peaklogistics/agent/memory/*.md
+vaults/peaklogistics/agent/logs/
+vaults/peaklogistics/agent/slack/state.json
+vaults/peaklogistics/project/status/
