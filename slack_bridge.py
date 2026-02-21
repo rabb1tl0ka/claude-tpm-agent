@@ -158,6 +158,32 @@ def _extract_last_run_section(log_full_path: str) -> tuple[str, str] | None:
     return (reflect_text, full_section_text)
 
 
+def _strip_frontmatter(content: str) -> str:
+    """Remove YAML frontmatter block from content, return body only."""
+    if content.startswith("---"):
+        end = content.find("---", 3)
+        if end != -1:
+            return content[end + 3:].strip()
+    return content.strip()
+
+
+def _first_sentence(text: str) -> str:
+    """Return first meaningful sentence from text, capped at 120 chars."""
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("-") or line.startswith("*"):
+            continue
+        # Split on sentence-ending punctuation followed by space
+        for punct in (". ", "? ", "! "):
+            idx = line.find(punct, 0, 110)
+            if idx != -1:
+                return line[:idx + 1]
+        if len(line) > 120:
+            return line[:117] + "…"
+        return line
+    return text[:120]
+
+
 def _find_inter_agent_messages(state: dict) -> list[dict]:
     """Scan all agent/inbox/{role}/ dirs for unposted inter-agent messages.
 
@@ -256,6 +282,159 @@ async def _run_haiku(prompt: str, max_turns: int = 5, label: str = "slack-bridge
     except Exception as e:
         log.warning(f"[{label}] Agent error: {e}")
     return cost_usd
+
+
+# ---------------------------------------------------------------------------
+# Outbound: digest — one compact message replacing all per-event posts
+# ---------------------------------------------------------------------------
+
+async def post_digest() -> None:
+    """Post a compact digest of all pending comms to Slack.
+
+    Covers three types:
+    - Questions from roles → Bruno (Agent → Bruno)
+    - Drafts awaiting approval (Agent → Bruno)
+    - Inter-agent messages (Agent → Agent)
+
+    Main post: one-liner per item (scannable).
+    Thread replies: full content of each item.
+    Skips entirely if nothing new to post.
+    """
+    state = _load_state()
+    vault = _vault_abs()
+
+    # ── Gather questions ────────────────────────────────────────────────
+    questions = []
+    for rel_path in _find_unposted("agent/inbox/user", state):
+        full = os.path.join(vault, rel_path)
+        try:
+            with open(full) as f:
+                content = f.read()
+        except Exception:
+            continue
+        from_role = _parse_frontmatter_from(content)
+        body = _strip_frontmatter(content)
+        summary = _first_sentence(body)
+        try:
+            persona = _get_persona(config.load_role(from_role)) if from_role else {"username": "Agent", "emoji": ":robot_face:"}
+        except Exception:
+            persona = {"username": from_role or "Agent", "emoji": ":robot_face:"}
+        questions.append({
+            "rel_path": rel_path,
+            "username": persona["username"],
+            "emoji": persona["emoji"],
+            "summary": summary,
+            "content": content,
+        })
+
+    # ── Gather drafts ───────────────────────────────────────────────────
+    drafts = []
+    outbox_root = os.path.join(vault, "agent", "outbox")
+    if os.path.isdir(outbox_root):
+        for role_name in sorted(os.listdir(outbox_root)):
+            drafts_rel = f"agent/outbox/{role_name}/drafts"
+            for rel_path in _find_unposted(drafts_rel, state):
+                full = os.path.join(vault, rel_path)
+                try:
+                    with open(full) as f:
+                        content = f.read()
+                except Exception:
+                    continue
+                try:
+                    persona = _get_persona(config.load_role(role_name))
+                except Exception:
+                    persona = {"username": role_name, "emoji": ":robot_face:"}
+                title = os.path.splitext(os.path.basename(rel_path))[0]
+                summary = _first_sentence(_strip_frontmatter(content))
+                drafts.append({
+                    "rel_path": rel_path,
+                    "username": persona["username"],
+                    "emoji": persona["emoji"],
+                    "title": title,
+                    "summary": summary,
+                    "content": content,
+                })
+
+    # ── Gather inter-agent messages ─────────────────────────────────────
+    inter_agent = []
+    for msg in _find_inter_agent_messages(state):
+        body = _strip_frontmatter(msg["content"])
+        summary = _first_sentence(body)
+        try:
+            from_persona = _get_persona(config.load_role(msg["from_role"]))
+            to_persona = _get_persona(config.load_role(msg["to_role"]))
+        except Exception:
+            from_persona = {"username": msg["from_role"], "emoji": ":robot_face:"}
+            to_persona = {"username": msg["to_role"], "emoji": ":robot_face:"}
+        inter_agent.append({
+            **msg,
+            "from_username": from_persona["username"],
+            "from_emoji": from_persona["emoji"],
+            "to_username": to_persona["username"],
+            "to_emoji": to_persona["emoji"],
+            "summary": summary,
+        })
+
+    if not questions and not drafts and not inter_agent:
+        return
+
+    log.info(f"[slack-digest] {len(questions)} question(s), {len(drafts)} draft(s), {len(inter_agent)} inter-agent")
+
+    channel_block = _channel_id_prompt_block()
+    payload = json.dumps({
+        "questions": questions,
+        "drafts": drafts,
+        "inter_agent": inter_agent,
+    }, indent=2)
+
+    prompt = f"""You are the TPM Agent Slack bridge. Post a compact digest to Slack.
+
+{channel_block}
+
+Slack channel: {SLACK_CHANNEL}
+Vault root: {vault}
+State file: agent/slack/state.json
+
+Digest payload (JSON):
+{payload}
+
+Instructions:
+1. Resolve channel ID (see above).
+
+2. Build the main digest message text. Use this exact format
+   (omit sections that have no items):
+
+*PLM Digest* · <current HH:MM>
+{"" if not questions and not drafts else """
+*For you* (reply in thread):"""}
+{"" if not questions else "".join(f"""
+• {q['emoji']} {q['username']} — _{q['summary']}_""" for q in questions)}
+{"" if not drafts else "".join(f"""
+• {d['emoji']} {d['username']} — Draft: \\"{d['title']}\\" ← APPROVE or REJECT in thread""" for d in drafts)}
+{"" if not inter_agent else """
+*Between agents:*"""}
+{"" if not inter_agent else "".join(f"""
+• {m['from_emoji']} {m['from_username']} → {m['to_emoji']} {m['to_username']} — _{m['summary']}_""" for m in inter_agent)}
+
+3. Post the main digest using slack_send_message:
+   - channel: <channel_id>
+   - text: <digest text above>
+   Save the ts as digest_ts.
+
+4. Post one thread reply per item (in order: questions, drafts, inter_agent).
+   Each reply: slack_send_message with thread_ts=digest_ts.
+   Keep replies SHORT — 3-5 lines max. Include:
+   - The key content (question text, draft subject/first paragraph, message body)
+   - Vault path for full details: `<rel_path>`
+   Do NOT dump the entire file. Truncate at ~300 chars if needed.
+
+5. Read agent/slack/state.json. Add channel_id if new. Add every rel_path to "posted":
+   "<rel_path>": {{"thread_ts": "<digest_ts>", "channel": "<channel_id>", "posted_at": "<ISO8601_now>"}}
+   Write updated state back.
+
+Post now. One main message + one thread reply per item.
+"""
+    await _run_haiku(prompt, max_turns=10, label="slack-digest")
 
 
 # ---------------------------------------------------------------------------

@@ -525,9 +525,7 @@ async def run_role_async(role_name: str, reason: str):
         # Verify log was written
         verify_log_written(role_name, initial_log_size)
 
-        # Post run log to Slack
-        if slack_bridge.is_enabled():
-            await slack_bridge.post_role_run_log(role_name, role_cfg, cost_usd, log_file_path)
+        # Slack: digest is posted by the main loop, not per-run
 
     except Exception as e:
         error_str = str(e).lower()
@@ -738,7 +736,7 @@ def main():
         log.info("Mode: single check")
         check_all_inboxes(dry_run=args.dry_run)
         if not args.dry_run and slack_bridge.is_enabled():
-            asyncio.run(slack_bridge.post_inter_agent_messages())
+            asyncio.run(slack_bridge.post_digest())
         log.info("Done.")
         return
 
@@ -754,10 +752,8 @@ def main():
             check_all_inboxes(dry_run=args.dry_run)
             asyncio.run(compile_daily_summary())
             if not args.dry_run and slack_bridge.is_enabled():
-                asyncio.run(slack_bridge.check_slack_inbound())           # Slack → vault
-                asyncio.run(slack_bridge.post_new_user_questions())       # vault → Slack
-                asyncio.run(slack_bridge.post_new_drafts())               # vault → Slack
-                asyncio.run(slack_bridge.post_inter_agent_messages())     # vault → Slack
+                asyncio.run(slack_bridge.check_slack_inbound())   # Slack → vault
+                asyncio.run(slack_bridge.post_digest())           # vault → Slack (digest)
             time.sleep(60)
     except KeyboardInterrupt:
         log.info("Runner stopped.")
